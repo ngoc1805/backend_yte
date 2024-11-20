@@ -26,6 +26,7 @@ val bacSiDAO = BacSiDAO(database)
 val tinTucDao = TinTucDao(database)
 val taiKhoanDAO = TaiKhoanDAO(database)
 val nguoiDungDAO = NguoiDungDAO(database)
+val lichKhamDAO = LichKhamDAO(database)
 fun Application.modules() {
     install(ContentNegotiation) {
 //        gson {  }
@@ -258,6 +259,9 @@ fun Application.modules() {
         // lấy id theo tai khoan
         getIdbyTenTk()
         getNguoiDungByIdTk()
+        updateSoDu()
+        addTaiKhoanAndNguoiDung()
+        themLichKham()
 
  }
 

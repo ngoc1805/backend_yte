@@ -8,7 +8,13 @@ import org.ktorm.database.Database
 import org.ktorm.dsl.*
 
 @Serializable
-data class BacSi(val bacSiId: Int, val hoten: String, val khoa: String, val giakham: Int)
+data class BacSi(
+    val bacSiId: Int,
+    val hoten: String,
+    val idTaiKhoan: Int,
+    val khoa: String,
+    val giakham: Int
+)
 class BacSiDAO(private val database: Database) {
 
     //lay danh sach bac si theo khoa
@@ -20,6 +26,7 @@ class BacSiDAO(private val database: Database) {
                 BacSi(
                     bacSiId = row[BacSiTable.bacSiId] ?: 0,
                     hoten = row[BacSiTable.hoten] ?: "",
+                    idTaiKhoan = row[BacSiTable.idTaiKhoan] ?: 0,
                     khoa = row[BacSiTable.khoa] ?: "",
                     giakham = row[BacSiTable.giakham] ?: 0
                 )
@@ -33,6 +40,7 @@ class BacSiDAO(private val database: Database) {
                 BacSi(
                     bacSiId = row[BacSiTable.bacSiId] ?: 0,
                     hoten = row[BacSiTable.hoten] ?: "",
+                    idTaiKhoan = row[BacSiTable.idTaiKhoan] ?: 0,
                     khoa = row[BacSiTable.khoa] ?: "",
                     giakham = row[BacSiTable.giakham] ?: 0
                 )

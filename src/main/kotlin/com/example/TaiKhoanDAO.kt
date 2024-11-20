@@ -115,18 +115,14 @@ fun Route.checkLogin() {
     route("/post") {
         post("/login") {
             val request = call.receive<Map<String, String>>()
-
             val tentk = request["tentk"]
             val matkhau = request["matkhau"]
-
             if (tentk.isNullOrEmpty() || matkhau.isNullOrEmpty()) {
                 call.respond(ResponseMessage(error = "Các trường bắt buộc không được để trống"))
                 return@post
             }
-
             val kttaikhoa = taiKhoanDAO.getTaiKhoanByTenTK(tentk)
             val login = taiKhoanDAO.checkPassword(tentk, matkhau)
-
             if (kttaikhoa != null && login) {
                 call.respond(ResponseMessage(exists = true, message = "Đăng nhập thành công"))
             } else {
@@ -142,7 +138,6 @@ fun Route.checkTk(){
     route("/check"){
         get("/taikhoan") {
             val tenTK = call.request.queryParameters["tenTK"]
-
             // Kiểm tra nếu tenTK bị null hoặc trống
             if (tenTK.isNullOrEmpty()) {
                 call.respond(ResponseMessage(error = "Tên tài khoản không được để trống"))
@@ -156,7 +151,6 @@ fun Route.checkTk(){
             } else {
                 call.respond(ResponseMessage(exists = false, message = "Tên tài khoản chưa tồn tại"))
             }
-
         }
     }
 }
@@ -168,16 +162,13 @@ fun Route.deleteTk(){
                 // Nhận dữ liệu từ request body (JSON)
                 val requestBody = call.receive<Map<String, String>>()
                 val tentk = requestBody["tentk"]
-
                 // Kiểm tra `tentk` có tồn tại không
                 if (tentk.isNullOrEmpty()) {
                     call.respond(ResponseMessage(error = "Tên tài khoản không được để trống"))
                     return@post
                 }
-
                 // Gọi hàm xóa tài khoản từ DAO
                 val rowsDeleted = taiKhoanDAO.deleteTaiKhoanByTenTK(tentk)
-
                 // Trả về kết quả
                 if (rowsDeleted > 0) {
                     call.respond(ResponseMessage(message = "Tài khoản đã được xóa", rowsDeleted = rowsDeleted))
@@ -197,16 +188,15 @@ fun Route.getIdbyTenTk(){
             post("/id/bytentk") {
             val requestBody = call.receive<Map<String, String>>()
             val tentk = requestBody["tentk"]
-
             if(tentk.isNullOrEmpty()){
                 call.respond(ResponseMessage(error = "Tên tài khoản không được để trống"))
                 return@post
             }
-
             val idTk = taiKhoanDAO.getIdByTenTK(tentk)
             call.respond(ResponseMessage(rowsDeleted = idTk))
         }
     }
 }
+
 
 
