@@ -48,6 +48,7 @@ object BenhNhanTable : Table<Nothing>("benhNhan") {
     val gioitinh = varchar("gioitinh")
     val sodu = int("sodu")
     val idTaiKhoan = int("idTaiKhoan")
+    val maPin = varchar("maPin")
 }
 // bảng lịch khám
  enum class TrangThai(val mota: String){

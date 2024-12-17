@@ -56,6 +56,10 @@ data class NguoiDungLichKham(
     val idLichKham: Int,
     val idChucNang: String
 )
+@Serializable
+data class MaPin(
+    val maPin: String
+)
 class NguoiDungDAO(private val database: Database) {
     // thêm người dùng mới
     fun addNguoiDung(nguoiDung: NguoiDung): NguoiDung{
@@ -161,12 +165,18 @@ class NguoiDungDAO(private val database: Database) {
         // Trả về danh sách thông tin bệnh nhân kèm theo idLichKham và idChucNang
         return danhSachBenhNhan
     }
-
-
+    fun capNhapMaPin(idBenhNhan: String, maPin: String): Boolean {
+        // Thực hiện câu lệnh update để cập nhật mã pin cho bệnh nhân
+        val updatedRows = database.update(BenhNhanTable) {
+            set(BenhNhanTable.maPin, maPin)  // Cập nhật trường maPin
+            where { BenhNhanTable.idBenhNhan eq idBenhNhan }  // Điều kiện cập nhật theo idBenhNhan
+        }
+        return updatedRows > 0  // Trả về true nếu có ít nhất một dòng được cập nhật
+    }
 
 }
 
-// lấy thông tin theo id tài khoản
+// lấy thông tin theo id tài khoản--------------------------------------------------------------------------------------
 fun Route.getNguoiDungByIdTk() {
     route("/get") {
         get("/nguoidung") {
