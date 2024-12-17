@@ -18,6 +18,20 @@ repositories {
 
 dependencies {
 
+    implementation ("org.apache.logging.log4j:log4j-api:2.20.0")
+    implementation ("org.apache.logging.log4j:log4j-core:2.20.0")
+
+
+    implementation ("org.apache.poi:poi-ooxml:5.2.3")
+    implementation ("org.apache.pdfbox:pdfbox:2.0.27")
+
+
+
+    implementation("org.jetbrains.exposed:exposed-core:0.41.1")
+    implementation("org.jetbrains.exposed:exposed-dao:0.41.1")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.41.1")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.41.1")
+
     implementation("org.ktorm:ktorm-core:3.5.0") // Hoặc phiên bản mới nhất
     implementation("org.ktorm:ktorm-support-mysql:3.5.0") // Nếu sử dụng MySQL
 

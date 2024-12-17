@@ -22,19 +22,20 @@ data class ResponseMessage(
     val error: String? = null,
     val exists: Boolean? = null,
     val rowsDeleted: Int? = null
+
 )
 class TaiKhoanDAO(private val database: Database) {
     // lấy tài khoản theo tên tài khoản
     fun getTaiKhoanByTenTK(tentk: String): TaiKhoan?{
         return database.from(TaiKhoanTable)
             .select()
-            .where( TaiKhoanTable.tentk eq tentk)
+            .where( TaiKhoanTable.tenTK eq tentk)
             .map { row ->
                 TaiKhoan(
-                    tentk = row[TaiKhoanTable.tentk] ?: "",
-                    matkhau = row[TaiKhoanTable.matkhau] ?: "",
-                    loaitk = row[TaiKhoanTable.loaitk] ?.let { LoaiTaiKhoan.valueOf(it) },
-                    idTaiKhoan = row[TaiKhoanTable.id_taikhoan] ?: 0
+                    tentk = row[TaiKhoanTable.tenTK] ?: "",
+                    matkhau = row[TaiKhoanTable.matKhau] ?: "",
+                    loaitk = row[TaiKhoanTable.loaiTK] ?.let { LoaiTaiKhoan.valueOf(it) },
+                    idTaiKhoan = row[TaiKhoanTable.idTaiKhoan] ?: 0
                 )
             }
             .singleOrNull() // trả về null nếu không tìm thấy tài khoản
@@ -44,20 +45,36 @@ class TaiKhoanDAO(private val database: Database) {
         val taiKhoan = getTaiKhoanByTenTK(tentk)
         return taiKhoan?.matkhau == inputPassword
     }
+    // kiem tra mat khau bac si
+    fun checkPasswordBacSi(tentk: String, inputPassword: String): Boolean {
+        // Lấy tài khoản theo tên tài khoản
+        val taiKhoan = getTaiKhoanByTenTK(tentk)
+
+        // Kiểm tra nếu tài khoản không null, loại tài khoản là "bacsi", và mật khẩu khớp
+        return taiKhoan?.loaitk == LoaiTaiKhoan.bacsi && taiKhoan.matkhau == inputPassword
+    }
+    fun checkPasswordChucNang(tentk: String, inputPassword: String): Boolean {
+        // Lấy tài khoản theo tên tài khoản
+        val taiKhoan = getTaiKhoanByTenTK(tentk)
+
+        // Kiểm tra nếu tài khoản không null, loại tài khoản là "chucnang", và mật khẩu khớp
+        return taiKhoan?.loaitk == LoaiTaiKhoan.chucnang && taiKhoan.matkhau == inputPassword
+    }
+
     // Phương thức lấy id_taikhoan theo tên tài khoản (tentk)
     fun getIdByTenTK(tentk: String): Int? {
         return database.from(TaiKhoanTable)
-            .select(TaiKhoanTable.id_taikhoan)
-            .where { TaiKhoanTable.tentk eq tentk }
-            .map { row -> row[TaiKhoanTable.id_taikhoan] }
+            .select(TaiKhoanTable.idTaiKhoan)
+            .where { TaiKhoanTable.tenTK eq tentk }
+            .map { row -> row[TaiKhoanTable.idTaiKhoan] }
             .singleOrNull()
     }
     // tạo tài khoản mới
     fun createTaiKhoan(tentk: String, matkhau: String, loaitk: LoaiTaiKhoan): TaiKhoan{
         val newId = database.insertAndGenerateKey(TaiKhoanTable){
-            set(TaiKhoanTable.tentk, tentk)
-            set(TaiKhoanTable.matkhau, matkhau)
-            set(TaiKhoanTable.loaitk, loaitk.name)
+            set(TaiKhoanTable.tenTK, tentk)
+            set(TaiKhoanTable.matKhau, matkhau)
+            set(TaiKhoanTable.loaiTK, loaitk.name)
         } as Int
         return TaiKhoan(tentk,matkhau,loaitk,newId)
     }
@@ -65,7 +82,7 @@ class TaiKhoanDAO(private val database: Database) {
 
     fun deleteTaiKhoanByTenTK(tentk: String): Int {
         return database.delete(TaiKhoanTable) {
-            it.tentk eq tentk
+            it.tenTK eq tentk
         }
     }
 
@@ -80,9 +97,9 @@ fun Route.addTaiKhoan(){
     route("/post"){
         post("/add/taikhoan") {
             val request = call.receive<Map<String,String>>()
-            val tentk = request["tentk"]
-            val matkhau = request["matkhau"]
-            val loaitkString = request["loaitk"]
+            val tentk = request["tenTK"]
+            val matkhau = request["matKhau"]
+            val loaitkString = request["loaiTK"]
             // kiểm tra các tham số đầu vào
             if(tentk.isNullOrEmpty() || matkhau.isNullOrEmpty() || loaitkString.isNullOrEmpty()){
                 call.respond(ResponseMessage(error = "Tên tài khoản, mật khẩu và loại tài khoản không được để trống"))
@@ -109,7 +126,7 @@ fun Route.addTaiKhoan(){
 }
 
 
-
+//----------------------------------------------------------------------------------------------------------------------
 // kiểm tra tai khoan mat khau
 fun Route.checkLogin() {
     route("/post") {
@@ -132,7 +149,7 @@ fun Route.checkLogin() {
     }
 }
 
-
+//----------------------------------------------------------------------------------------------------------------------
 // kiểm tra tài khoản đã tồn tại chưa
 fun Route.checkTk(){
     route("/check"){
@@ -154,7 +171,7 @@ fun Route.checkTk(){
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 fun Route.deleteTk(){
     route("/post"){
         post("/delete_account") {
@@ -182,7 +199,7 @@ fun Route.deleteTk(){
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 fun Route.getIdbyTenTk(){
     route("/post"){
             post("/id/bytentk") {
@@ -194,6 +211,60 @@ fun Route.getIdbyTenTk(){
             }
             val idTk = taiKhoanDAO.getIdByTenTK(tentk)
             call.respond(ResponseMessage(rowsDeleted = idTk))
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.checkLoginBacSi() {
+    route("/post") {
+        post("/login/bacsi") {
+            // Nhận dữ liệu từ request body (JSON)
+            val request = call.receive<Map<String, String>>()
+            val tentk = request["tentk"]
+            val matkhau = request["matkhau"]
+
+            // Kiểm tra các trường bắt buộc không được để trống
+            if (tentk.isNullOrEmpty() || matkhau.isNullOrEmpty()) {
+                call.respond(ResponseMessage(error = "Tên tài khoản và mật khẩu không được để trống"))
+                return@post
+            }
+
+            // Kiểm tra tài khoản bác sĩ và mật khẩu
+            val isLoginSuccessful = taiKhoanDAO.checkPasswordBacSi(tentk, matkhau)
+
+            // Kiểm tra kết quả
+            if (isLoginSuccessful) {
+                call.respond(ResponseMessage(exists = true, message = "Đăng nhập bác sĩ thành công"))
+            } else {
+                call.respond(ResponseMessage(exists = false, message = "Tài khoản hoặc mật khẩu không chính xác hoặc không phải tài khoản bác sĩ"))
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.checkLoginChucNang(){
+    route("/post"){
+        post("/login/chucnang"){
+            // Nhận dữ liệu từ request body (JSON)
+            val request = call.receive<Map<String, String>>()
+            val tentk = request["tentk"]
+            val matkhau = request["matkhau"]
+
+            // Kiểm tra các trường bắt buộc không được để trống
+            if (tentk.isNullOrEmpty() || matkhau.isNullOrEmpty()) {
+                call.respond(ResponseMessage(error = "Tên tài khoản và mật khẩu không được để trống"))
+                return@post
+            }
+
+            // Kiểm tra tài khoản bác sĩ và mật khẩu
+            val isLoginSuccessful = taiKhoanDAO.checkPasswordChucNang(tentk, matkhau)
+
+            // Kiểm tra kết quả
+            if (isLoginSuccessful) {
+                call.respond(ResponseMessage(exists = true, message = "Đăng nhập bác sĩ thành công"))
+            } else {
+                call.respond(ResponseMessage(exists = false, message = "Tài khoản hoặc mật khẩu không chính xác hoặc không phải tài khoản bác sĩ"))
+            }
         }
     }
 }

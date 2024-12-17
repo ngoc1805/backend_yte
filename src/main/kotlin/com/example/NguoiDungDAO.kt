@@ -32,7 +32,7 @@ object LocalDateSerializer {
 }
 @Serializable
 data class NguoiDung(
-    val nguoiDungId: Int = 0,
+    val idBenhNhan: String = "",
     val hoten: String,
     val sdt: String,
     @Serializable(with = LocalDateSerializer::class) val ngaysinh: LocalDate,
@@ -42,50 +42,128 @@ data class NguoiDung(
     val sodu: Int?,
     val idTaiKhoan: Int
 )
+@Serializable
+data class NguoiDungLichKham(
+    val idBenhNhan: String = "",
+    val hoten: String,
+    val sdt: String,
+    @Serializable(with = LocalDateSerializer::class) val ngaysinh: LocalDate,
+    val cccd: String,
+    val quequan: String?,
+    val gioitinh: String?,
+    val sodu: Int?,
+    val idTaiKhoan: Int,
+    val idLichKham: Int,
+    val idChucNang: String
+)
 class NguoiDungDAO(private val database: Database) {
     // thêm người dùng mới
     fun addNguoiDung(nguoiDung: NguoiDung): NguoiDung{
-        val newsId = database.insertAndGenerateKey(NguoiDungTable){
-            set(NguoiDungTable.hoten, nguoiDung.hoten)
-            set(NguoiDungTable.sdt, nguoiDung.sdt)
-            set(NguoiDungTable.ngaysinh, nguoiDung.ngaysinh)
-            set(NguoiDungTable.cccd, nguoiDung.cccd)
-            set(NguoiDungTable.quequan, nguoiDung.quequan)
-            set(NguoiDungTable.gioitinh, nguoiDung.gioitinh)
-            set(NguoiDungTable.sodu, nguoiDung.sodu)
-            set(NguoiDungTable.idTaiKhoan, nguoiDung.idTaiKhoan)
-        } as Int
-        return nguoiDung.copy(nguoiDungId = newsId)
+        val newsId = database.insertAndGenerateKey(BenhNhanTable){
+            set(BenhNhanTable.hoten, nguoiDung.hoten)
+            set(BenhNhanTable.sdt, nguoiDung.sdt)
+            set(BenhNhanTable.ngaysinh, nguoiDung.ngaysinh)
+            set(BenhNhanTable.cccd, nguoiDung.cccd)
+            set(BenhNhanTable.quequan, nguoiDung.quequan)
+            set(BenhNhanTable.gioitinh, nguoiDung.gioitinh)
+            set(BenhNhanTable.sodu, nguoiDung.sodu)
+            set(BenhNhanTable.idTaiKhoan, nguoiDung.idTaiKhoan)
+        } as String
+        return nguoiDung.copy(idBenhNhan = newsId)
     }
     fun getNguoiDungByIdTk(idTaiKhoan: Int): NguoiDung?{
-        return database.from(NguoiDungTable)
+        return database.from(BenhNhanTable)
             .select()
-            .where(NguoiDungTable.idTaiKhoan eq idTaiKhoan )
+            .where(BenhNhanTable.idTaiKhoan eq idTaiKhoan )
             .map { row ->
                 NguoiDung(
-                    nguoiDungId = row[NguoiDungTable.nguoiDungId] ?: 0,
-                    hoten = row[NguoiDungTable.hoten] ?: "",
-                    sdt = row[NguoiDungTable.sdt] ?: "",
-                    ngaysinh = row[NguoiDungTable.ngaysinh] ?.let {
+                    idBenhNhan = row[BenhNhanTable.idBenhNhan] ?: "",
+                    hoten = row[BenhNhanTable.hoten] ?: "",
+                    sdt = row[BenhNhanTable.sdt] ?: "",
+                    ngaysinh = row[BenhNhanTable.ngaysinh] ?.let {
                         // Chuyển đổi giá trị từ cơ sở dữ liệu thành LocalDate
                         LocalDate.parse(it.toString())
                     } ?: LocalDate.now(), // Giá trị mặc định nếu null
-                    cccd = row[NguoiDungTable.cccd] ?: "",
-                    quequan = row[NguoiDungTable.quequan] ?: "",
-                    gioitinh = row[NguoiDungTable.gioitinh] ?: "",
-                    sodu = row[NguoiDungTable.sodu] ?: 0,
-                    idTaiKhoan = row[NguoiDungTable.idTaiKhoan] ?:0
+                    cccd = row[BenhNhanTable.cccd] ?: "",
+                    quequan = row[BenhNhanTable.quequan] ?: "",
+                    gioitinh = row[BenhNhanTable.gioitinh] ?: "",
+                    sodu = row[BenhNhanTable.sodu] ?: 0,
+                    idTaiKhoan = row[BenhNhanTable.idTaiKhoan] ?:0
                 )
             }
             .singleOrNull()
     }
-    fun updateSoDuById(nguoiDungId: Int, sodu: Int) : Boolean{
-        val updatedRows = database.update(NguoiDungTable) {
-            set(NguoiDungTable.sodu, sodu)
-            where { NguoiDungTable.nguoiDungId eq nguoiDungId }
+    fun updateSoDuById(idBenhNhan: String, sodu: Int) : Boolean{
+        val updatedRows = database.update(BenhNhanTable) {
+            set(BenhNhanTable.sodu, sodu)
+            where { BenhNhanTable.idBenhNhan eq idBenhNhan  }
         }
         return updatedRows > 0
     }
+
+    fun getNguoiDungByIdBenhNhan(idBenhNhan: String): NguoiDung? {
+        return database.from(BenhNhanTable)
+            .select()
+            .where(BenhNhanTable.idBenhNhan eq idBenhNhan)  // Truy vấn bằng idBenhNhan
+            .map { row ->
+                NguoiDung(
+                    idBenhNhan = row[BenhNhanTable.idBenhNhan] ?: "",  // Lấy idBenhNhan
+                    hoten = row[BenhNhanTable.hoten] ?: "",  // Lấy họ tên
+                    sdt = row[BenhNhanTable.sdt] ?: "",  // Lấy số điện thoại
+                    ngaysinh = row[BenhNhanTable.ngaysinh]?.let {
+                        // Chuyển đổi từ cơ sở dữ liệu thành LocalDate
+                        LocalDate.parse(it.toString())
+                    } ?: LocalDate.now(),  // Nếu ngaysinh là null thì trả về ngày hiện tại
+                    cccd = row[BenhNhanTable.cccd] ?: "",  // Lấy số CCCD
+                    quequan = row[BenhNhanTable.quequan] ?: "",  // Lấy quê quán
+                    gioitinh = row[BenhNhanTable.gioitinh] ?: "",  // Lấy giới tính
+                    sodu = row[BenhNhanTable.sodu] ?: 0,  // Lấy số dư
+                    idTaiKhoan = row[BenhNhanTable.idTaiKhoan] ?: 0  // Lấy id tài khoản
+                )
+            }
+            .singleOrNull()  // Lấy một kết quả duy nhất, hoặc null nếu không tìm thấy
+    }
+
+    fun getThongTinBenhNhanByIdChucNang(idChucNang: String): List<NguoiDungLichKham> {
+        // Bước 1: Lấy danh sách idLichKham từ idChucNang
+        val idLichKhamList = khamChucNangDAO.getIdLichKhamByIdChucNang(idChucNang)
+
+        // Bước 2: Lấy danh sách idBenhNhan từ idLichKham
+        val idBenhNhanList = lichKhamDAO.getIdBenhNhanByIdLichKham(idLichKhamList)
+
+        // Bước 3: Lấy thông tin bệnh nhân từ danh sách idBenhNhan và ghép với idLichKham
+        val nguoiDungDAO = NguoiDungDAO(database)
+
+        // Sử dụng zip để ghép từng idBenhNhan với idLichKham
+        val danhSachBenhNhan = idBenhNhanList.zip(idLichKhamList).mapNotNull { (idBenhNhan, idLichKham) ->
+            // Lấy thông tin bệnh nhân từ database
+            val nguoiDung = nguoiDungDAO.getNguoiDungByIdBenhNhan(idBenhNhan)
+
+            // Nếu bệnh nhân có thông tin, kết hợp với idLichKham và idChucNang
+            nguoiDung?.let {
+                // Trả về đối tượng chứa thông tin bệnh nhân, idLichKham và idChucNang
+                NguoiDungLichKham(
+                    idBenhNhan = nguoiDung.idBenhNhan,
+                    hoten = nguoiDung.hoten,
+                    sdt = nguoiDung.sdt,
+                    ngaysinh = nguoiDung.ngaysinh,   // Ngày sinh bệnh nhân
+                    cccd = nguoiDung.cccd,           // Căn cước công dân
+                    quequan = nguoiDung.quequan,     // Quê quán
+                    gioitinh = nguoiDung.gioitinh,   // Giới tính
+                    sodu = nguoiDung.sodu,           // Số dư (nếu có)
+                    idTaiKhoan = nguoiDung.idTaiKhoan, // ID tài khoản
+                    idLichKham = idLichKham,    // ID lịch khám từ zip
+                    idChucNang = idChucNang     // ID chức năng (thông qua tham số)
+                )
+            }
+        }
+
+        // Trả về danh sách thông tin bệnh nhân kèm theo idLichKham và idChucNang
+        return danhSachBenhNhan
+    }
+
+
+
 }
 
 // lấy thông tin theo id tài khoản
@@ -94,7 +172,7 @@ fun Route.getNguoiDungByIdTk() {
         get("/nguoidung") {
             try {
                 // Nhận tham số từ query
-                val idTaiKhoanStr = call.request.queryParameters["idtaikhoan"]
+                val idTaiKhoanStr = call.request.queryParameters["idTaiKhoan"]
 
                 // Kiểm tra nếu id tài khoản trống
                 if (idTaiKhoanStr.isNullOrEmpty()) {
@@ -129,14 +207,14 @@ fun Route.updateSoDu(){
     route("/post"){
         post("/update/sodu") {
             val request = call.receive<Map<String,String>>()
-            val idtainguoidung = request["idnguoidung"]?.toIntOrNull()
+            val idbenhnhan = request["idbenhnhan"]
             val sodu = request["sodu"] ?.toIntOrNull()
 
-            if (idtainguoidung == null || sodu == null) {
+            if (idbenhnhan== null || sodu == null) {
                 call.respond(mapOf("error" to "ID người dùng và số dư không được để trống"))
                 return@post
             }
-            val success = nguoiDungDAO.updateSoDuById(idtainguoidung,sodu)
+            val success = nguoiDungDAO.updateSoDuById(idbenhnhan,sodu)
             if (success) {
                 call.respond(mapOf("message" to "Cập nhật số dư thành công"))
             } else {
@@ -217,3 +295,69 @@ fun Route.addTaiKhoanAndNguoiDung() {
         }
     }
 }
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.getNguoiDungByIdBenhNhan() {
+    route("/get") {
+        get("/benhnhan") {
+            try {
+                // Receive idBenhNhan from query parameters
+                val idBenhNhan = call.request.queryParameters["idBenhNhan"]
+
+                // Check if idBenhNhan is empty or null
+                if (idBenhNhan.isNullOrEmpty()) {
+                    call.respond(mapOf("error" to "Id bệnh nhân không được để trống"))
+                    return@get
+                }
+
+                // Get the patient data using the DAO
+                val result = nguoiDungDAO.getNguoiDungByIdBenhNhan(idBenhNhan)
+
+                // If the patient is not found, respond with an error message
+                if (result == null) {
+                    call.respond(mapOf("error" to "Không tìm thấy bệnh nhân"))
+                } else {
+                    // Return the patient details
+                    call.respond(result)
+                }
+            } catch (e: Exception) {
+                // Log the exception and respond with an error
+                e.printStackTrace()
+                call.respond(mapOf("error" to "Đã xảy ra lỗi: ${e.message}"))
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.getThongTinBenhNhanByIdChucNangRoute() {
+    route("/get") {
+        get("/benhnhan/idchucnang") {
+            try {
+                // Nhận tham số idChucNang từ query
+                val idChucNang = call.request.queryParameters["idchucnang"]
+
+                // Kiểm tra nếu idChucNang trống
+                if (idChucNang.isNullOrEmpty()) {
+                    call.respond(mapOf("error" to "Id chức năng không được để trống"))
+                    return@get
+                }
+
+                // Lấy dữ liệu bệnh nhân từ DAO
+                val nguoiDungDAO = NguoiDungDAO(database)
+                val danhSachBenhNhan = nguoiDungDAO.getThongTinBenhNhanByIdChucNang(idChucNang)
+
+                // Kiểm tra xem có bệnh nhân nào không
+                if (danhSachBenhNhan.isEmpty()) {
+                    call.respond(mapOf("error" to "Không tìm thấy bệnh nhân cho chức năng này"))
+                } else {
+                    // Trả về danh sách bệnh nhân
+                    call.respond(danhSachBenhNhan)
+                }
+            } catch (e: Exception) {
+                // Log lỗi và phản hồi
+                e.printStackTrace()
+                call.respond(mapOf("error" to "Đã xảy ra lỗi: ${e.message}"))
+            }
+        }
+    }
+}
+
