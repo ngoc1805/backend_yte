@@ -18,6 +18,14 @@ repositories {
 
 dependencies {
 
+    implementation("org.slf4j:slf4j-api:2.0.7")
+    implementation("ch.qos.logback:logback-classic:1.4.6")
+
+
+    implementation("com.google.firebase:firebase-admin:9.2.0")
+
+    implementation("at.favre.lib:bcrypt:0.9.0")
+
     implementation ("org.apache.logging.log4j:log4j-api:2.20.0")
     implementation ("org.apache.logging.log4j:log4j-core:2.20.0")
 
@@ -47,12 +55,15 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation:2.2.3")
     implementation("io.ktor:ktor-serialization-gson:2.2.3")
 
+    implementation("mysql:mysql-connector-java:8.0.33")
+
+
     // Logging dependency
-    implementation("ch.qos.logback:logback-classic:1.2.6")
+//    implementation("ch.qos.logback:logback-classic:1.2.6")
 
 
     // mySQL connector
-    implementation("mysql:mysql-connector-java:8.0.33")
+
 
     // ktorm core
     implementation("org.ktorm:ktorm-core:3.4.1")

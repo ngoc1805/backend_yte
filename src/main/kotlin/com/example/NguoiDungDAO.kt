@@ -1,5 +1,6 @@
 package com.example
 
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -172,6 +173,34 @@ class NguoiDungDAO(private val database: Database) {
             where { BenhNhanTable.idBenhNhan eq idBenhNhan }  // Điều kiện cập nhật theo idBenhNhan
         }
         return updatedRows > 0  // Trả về true nếu có ít nhất một dòng được cập nhật
+    }
+    // Kiểm tra xem bệnh nhân đã có mã pin hay chưa
+    fun hasMaPin(idBenhNhan: String): Boolean {
+        val maPin = database.from(BenhNhanTable)
+            .select(BenhNhanTable.maPin)
+            .where(BenhNhanTable.idBenhNhan eq idBenhNhan)
+            .map { row -> row[BenhNhanTable.maPin] }
+            .singleOrNull()
+
+        // Kiểm tra xem maPin có null hoặc trống không
+        return !maPin.isNullOrBlank()
+    }
+    fun checkMaPin(idBenhNhan: String, maPin: String): Boolean {
+        val maPinInDb = database.from(BenhNhanTable)
+            .select(BenhNhanTable.maPin)
+            .where(BenhNhanTable.idBenhNhan eq idBenhNhan)
+            .map { row -> row[BenhNhanTable.maPin] }
+            .singleOrNull()
+
+        // Kiểm tra xem mã pin có trùng không
+        return maPinInDb == maPin
+    }
+    fun updateFCMToken(idBenhNhan: String, fcmToken: String):Boolean {
+        val updateRows = database.update(BenhNhanTable){
+            set(BenhNhanTable.fcmToken, fcmToken)
+            where { BenhNhanTable.idBenhNhan eq idBenhNhan }
+        }
+        return  updateRows > 0
     }
 
 }
@@ -370,4 +399,102 @@ fun Route.getThongTinBenhNhanByIdChucNangRoute() {
         }
     }
 }
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.updateMaPin() {
+    route("/post") {
+        post("/update/mapin") {
+            // Nhận dữ liệu từ request body
+            val request = call.receive<Map<String, String>>()
+            val idBenhNhan = request["idBenhNhan"]
+            val maPin = request["maPin"]
+
+            // Kiểm tra dữ liệu đầu vào
+            if (idBenhNhan.isNullOrEmpty() || maPin.isNullOrEmpty()) {
+                call.respond(mapOf("error" to "ID bệnh nhân và mã pin không được để trống"))
+                return@post
+            }
+
+            // Cập nhật mã pin
+            val success = nguoiDungDAO.capNhapMaPin(idBenhNhan, maPin)
+            if (success) {
+                call.respond(mapOf("message" to "Cập nhật mã pin thành công"))
+            } else {
+                call.respond(mapOf("error" to "Không tìm thấy bệnh nhân với ID đã cho"))
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.hasMaPin() {
+    route("/get") {
+        get("/mapin") {
+            // Nhận tham số idBenhNhan từ query parameters
+            val idBenhNhan = call.request.queryParameters["idBenhNhan"]
+            // Kiểm tra nếu idBenhNhan trống
+            if (idBenhNhan.isNullOrEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, "ID bệnh nhân không được để trống")
+                return@get
+            }
+            // Kiểm tra mã pin của bệnh nhân
+            val hasMaPin = nguoiDungDAO.hasMaPin(idBenhNhan)
+            // Trả về mã trạng thái 200 nếu có mã pin, 404 nếu không có mã pin
+            if (hasMaPin) {
+                call.respond(HttpStatusCode.OK,  "Bệnh nhân đã có mã pin")
+            } else {
+                call.respond(HttpStatusCode.NotFound,  "Bệnh nhân chưa có mã pin")
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.checkMaPin() {
+    route("/get") {
+        get("/checkmapin") {
+            // Nhận tham số idBenhNhan và maPin từ query parameters
+            val idBenhNhan = call.request.queryParameters["idBenhNhan"]
+            val maPin = call.request.queryParameters["maPin"]
+
+            // Kiểm tra nếu idBenhNhan hoặc maPin trống
+            if (idBenhNhan.isNullOrEmpty() || maPin.isNullOrEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, "ID bệnh nhân và mã pin không được để trống")
+                return@get
+            }
+            // Kiểm tra mã pin
+            val isPinValid = nguoiDungDAO.checkMaPin(idBenhNhan, maPin)
+            // Trả về mã trạng thái 200 nếu mã pin đúng, 404 nếu mã pin sai
+            if (isPinValid) {
+                call.respond(HttpStatusCode.OK, "Mã pin chính xác")
+            } else {
+                call.respond(HttpStatusCode.NotFound, "Mã pin không chính xác")
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.updateFCMToken() {
+    route("/post") {
+        post("/update/fcmtoken") {
+            // Nhận dữ liệu từ request body
+            val request = call.receive<Map<String, String>>()
+            val idBenhNhan = request["idBenhNhan"]
+            val fcmToken = request["fcmToken"]
+
+            // Kiểm tra dữ liệu đầu vào
+            if (idBenhNhan.isNullOrEmpty() || fcmToken.isNullOrEmpty()) {
+                call.respond(mapOf("error" to "ID bệnh nhân và mã pin không được để trống"))
+                return@post
+            }
+
+            // Cập nhật mã pin
+            val success = nguoiDungDAO.updateFCMToken(idBenhNhan,fcmToken)
+            if (success) {
+                call.respond(mapOf("message" to "Cập nhật thành công"))
+            } else {
+                call.respond(mapOf("error" to "Không tìm thấy bệnh nhân với ID đã cho"))
+            }
+        }
+    }
+}
+
+
 

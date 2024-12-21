@@ -145,8 +145,29 @@ class LichKhamDAO(private val database: Database) {
 
         return database.from(LichKhamTable)
             .select()
-            .where { (LichKhamTable.idBacSi eq idBacSi) and (LichKhamTable.trangThai eq "Đã lên lịch") }
-            .orderBy(LichKhamTable.ngayKham.desc())  // Sắp xếp theo ngày khám (có thể thêm điều kiện theo yêu cầu)
+            .where { (LichKhamTable.idBacSi eq idBacSi) and ((LichKhamTable.trangThai eq "Đã lên lịch") or (LichKhamTable.trangThai eq "Đã thanh toán") or (LichKhamTable.trangThai eq "y/c thanh toán"))
+            }
+            .orderBy(LichKhamTable.ngayKham.asc(), LichKhamTable.gioKham.asc())  // Sắp xếp theo ngày khám (có thể thêm điều kiện theo yêu cầu)
+            .map { row ->
+                LichKham(
+                    idLichKham = row[LichKhamTable.idLichKham] ?: 0,
+                    idBenhNhan = row[LichKhamTable.idBenhNhan] ?: "",
+                    idBacSi = row[LichKhamTable.idBacSi] ?: "",
+                    ngayKham = row[LichKhamTable.ngayKham]?.format(dateFormatter) ?: "",
+                    gioKham = row[LichKhamTable.gioKham]?.format(timeFormatter) ?: "",
+                    trangThai = row[LichKhamTable.trangThai] ?: ""
+                )
+            }
+    }
+    fun getLichKhamDaKhamCuaBacSi(idBacSi: String): List<LichKham> {
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd") // Format lưu trong DB
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")   // Format giờ lưu trong DB
+
+        return database.from(LichKhamTable)
+            .select()
+            .where { (LichKhamTable.idBacSi eq idBacSi) and ((LichKhamTable.trangThai eq "Đã hoàn tất"))
+            }
+            .orderBy(LichKhamTable.ngayKham.desc(), LichKhamTable.gioKham.desc())  // Sắp xếp theo ngày khám (có thể thêm điều kiện theo yêu cầu)
             .map { row ->
                 LichKham(
                     idLichKham = row[LichKhamTable.idLichKham] ?: 0,
@@ -335,6 +356,32 @@ fun Route.lichKhamToanBoCuaBacSi() {
             if (idBacSi != null) {
                 // Gọi phương thức DAO để lấy tất cả lịch khám của bác sĩ
                 val lichKhamList = LichKhamDAO(database).getLichKhamToanBoCuaBacSi(idBacSi)
+
+                // Kiểm tra nếu có lịch khám
+                if (lichKhamList.isNotEmpty()) {
+                    // Trả về danh sách lịch khám với mã trạng thái 200 OK
+                    call.respond(HttpStatusCode.OK, lichKhamList)
+                } else {
+                    // Nếu không có lịch khám, trả về mã trạng thái 204 No Content
+                    call.respond(HttpStatusCode.NoContent, "Không có lịch khám nào")
+                }
+            } else {
+                // Nếu thiếu ID bác sĩ trong tham số URL, trả về mã trạng thái 400 Bad Request
+                call.respond(HttpStatusCode.BadRequest, "Thiếu ID bác sĩ")
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.lichKhamDaKhamCuaBacSi() {
+    route("/get") {
+        get("/lichkham/dakham/idBacSi") {
+            // Lấy ID bác sĩ từ URL
+            val idBacSi = call.parameters["idBacSi"]
+
+            if (idBacSi != null) {
+                // Gọi phương thức DAO để lấy tất cả lịch khám của bác sĩ
+                val lichKhamList = LichKhamDAO(database).getLichKhamDaKhamCuaBacSi(idBacSi)
 
                 // Kiểm tra nếu có lịch khám
                 if (lichKhamList.isNotEmpty()) {

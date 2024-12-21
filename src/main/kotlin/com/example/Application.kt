@@ -2,6 +2,9 @@ package com.example
 
 
 
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.serialization.kotlinx.json.*
@@ -27,6 +30,16 @@ val khamChucNangDAO = KhamChucNangDAO(database)
 val fileKetQuaDAO = FileKetQuaDAO(database)
 val ketQuaKhamDAO = KetQuaKhamDAO(database)
 fun Application.modules() {
+
+    //----------------------------
+    val serviceAccountStream = this::class.java.classLoader.getResourceAsStream("ytenhom14-firebase-adminsdk-pk35k-73f56c612f.json")
+    val options = FirebaseOptions.builder()
+        .setCredentials(GoogleCredentials.fromStream(serviceAccountStream))
+        .build()
+
+    FirebaseApp.initializeApp(options)
+    //----------------------------
+
     install(ContentNegotiation) {
 //        gson {  }
         json(Json {
@@ -204,6 +217,15 @@ fun Application.modules() {
         getLichHenByIdLichKham()
         getFileByIdLichKham()
         capNhatTrangThaiThanhToan()
+        updateMaPin()
+        hasMaPin()
+        checkMaPin()
+        changePassWord()
+        lichKhamDaKhamCuaBacSi()
+        encryptPasswordRoute()
+        addTaiKhoanAndBacSi()
+        sendNotification()
+        updateFCMToken()
 
  }
 

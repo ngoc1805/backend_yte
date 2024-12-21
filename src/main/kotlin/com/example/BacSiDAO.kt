@@ -1,6 +1,8 @@
 package com.example
 
+import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
@@ -9,7 +11,7 @@ import org.ktorm.dsl.*
 
 @Serializable
 data class BacSi(
-    val idBacSi: String,
+    val idBacSi: String = "",
     val hoTen: String,
     val idTaiKhoan: Int,
     val khoa: String,
@@ -76,6 +78,15 @@ class BacSiDAO(private val database: Database) {
             }
             .singleOrNull()  // Trả về null nếu không tìm thấy
     }
+    fun addBacSi(bacSi: BacSi): BacSi{
+        val newId = database.insertAndGenerateKey(BacSiTable){
+            set(BacSiTable.hoTen, bacSi.hoTen)
+            set(BacSiTable.idTaiKhoan, bacSi.idTaiKhoan)
+            set(BacSiTable.khoa, bacSi.khoa)
+            set(BacSiTable.giaKham, bacSi.giaKham)
+        } as String
+        return bacSi.copy(idBacSi = newId)
+    }
 }
 
 fun Route.getAllBacSi(){
@@ -141,4 +152,58 @@ fun Route.getBacSiByIdTK() {
         }
     }
 }
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.addTaiKhoanAndBacSi() {
+    route("/post") {
+        post("/add/taikhoan/bacsi") {
+            val request = call.receive<Map<String, String>>()
+            val tenTk = request["tenTk"]
+            val matKhau = request["matKhau"]
+            val loaitkString = request["loaiTk"]
+            val hoTen = request["hoTen"]
+            val khoa = request["khoa"]
+            val giaKham = request["giaKham"]?.toIntOrNull()
+
+            // Kiểm tra đầu vào
+            if (tenTk.isNullOrEmpty() || matKhau.isNullOrEmpty() || loaitkString.isNullOrEmpty() || hoTen.isNullOrEmpty() || khoa.isNullOrEmpty() || giaKham == null) {
+                call.respond(HttpStatusCode.BadRequest, "Các trường bắt buộc không được để trống")
+                return@post
+            }
+
+            // Kiểm tra xem tài khoản đã tồn tại chưa
+            val existingAccount = taiKhoanDAO.getTaiKhoanByTenTK(tenTk)
+            if (existingAccount != null) {
+                call.respond(HttpStatusCode.NotFound, "Tài khoản đã tồn tại")
+                return@post
+            }
+
+            // Xác thực loại tài khoản
+            val loaitk = try {
+                LoaiTaiKhoan.valueOf(loaitkString)
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, "Loại tài khoản không hợp lệ")
+                return@post
+            }
+
+            try {
+                // Tạo tài khoản mới
+                val newAccount = taiKhoanDAO.createTaiKhoan(tenTk, matKhau, loaitk)
+
+                val bacSi = BacSi(
+                    hoTen = hoTen,
+                    idTaiKhoan = newAccount.idTaiKhoan,
+                    khoa = khoa,
+                    giaKham = giaKham
+                )
+                // Thêm thông tin bác sĩ
+                val newBacSi = bacSiDAO.addBacSi(bacSi)
+
+                call.respond(HttpStatusCode.OK, "Tạo tài khoản và người dùng thành công")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, "Lỗi trong quá trình tạo tài khoản hoặc người dùng: ${e.message}")
+            }
+        }
+    }
+}
+
 

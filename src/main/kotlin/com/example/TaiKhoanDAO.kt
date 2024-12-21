@@ -7,6 +7,8 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.ktorm.database.Database
 import org.ktorm.dsl.*
+import at.favre.lib.crypto.bcrypt.BCrypt
+import io.ktor.http.*
 
 
 @Serializable
@@ -41,25 +43,53 @@ class TaiKhoanDAO(private val database: Database) {
             .singleOrNull() // trả về null nếu không tìm thấy tài khoản
     }
     // Phương thức kiểm tra mật khẩu của tài khoản theo tên tài khoản
+//    fun checkPassword(tentk: String, inputPassword: String): Boolean {
+//        val taiKhoan = getTaiKhoanByTenTK(tentk)
+//        return taiKhoan?.matkhau == inputPassword
+//    }
     fun checkPassword(tentk: String, inputPassword: String): Boolean {
         val taiKhoan = getTaiKhoanByTenTK(tentk)
-        return taiKhoan?.matkhau == inputPassword
+        return taiKhoan?.let {
+            it.loaitk == LoaiTaiKhoan.benhnhan &&
+            BCrypt.verifyer().verify(inputPassword.toCharArray(), it.matkhau).verified
+        } ?: false
     }
+
     // kiem tra mat khau bac si
+//    fun checkPasswordBacSi(tentk: String, inputPassword: String): Boolean {
+//        // Lấy tài khoản theo tên tài khoản
+//        val taiKhoan = getTaiKhoanByTenTK(tentk)
+//        return taiKhoan?.loaitk == LoaiTaiKhoan.bacsi && taiKhoan.matkhau == inputPassword
+//    }
     fun checkPasswordBacSi(tentk: String, inputPassword: String): Boolean {
         // Lấy tài khoản theo tên tài khoản
         val taiKhoan = getTaiKhoanByTenTK(tentk)
 
         // Kiểm tra nếu tài khoản không null, loại tài khoản là "bacsi", và mật khẩu khớp
-        return taiKhoan?.loaitk == LoaiTaiKhoan.bacsi && taiKhoan.matkhau == inputPassword
+        return taiKhoan?.let {
+            it.loaitk == LoaiTaiKhoan.bacsi &&
+                    BCrypt.verifyer().verify(inputPassword.toCharArray(), it.matkhau).verified
+        } ?: false
     }
-    fun checkPasswordChucNang(tentk: String, inputPassword: String): Boolean {
-        // Lấy tài khoản theo tên tài khoản
-        val taiKhoan = getTaiKhoanByTenTK(tentk)
 
-        // Kiểm tra nếu tài khoản không null, loại tài khoản là "chucnang", và mật khẩu khớp
-        return taiKhoan?.loaitk == LoaiTaiKhoan.chucnang && taiKhoan.matkhau == inputPassword
-    }
+//    fun checkPasswordChucNang(tentk: String, inputPassword: String): Boolean {
+//        // Lấy tài khoản theo tên tài khoản
+//        val taiKhoan = getTaiKhoanByTenTK(tentk)
+//
+//        // Kiểm tra nếu tài khoản không null, loại tài khoản là "chucnang", và mật khẩu khớp
+//        return taiKhoan?.loaitk == LoaiTaiKhoan.chucnang && taiKhoan.matkhau == inputPassword
+//    }
+fun checkPasswordChucNang(tentk: String, inputPassword: String): Boolean {
+    // Lấy tài khoản theo tên tài khoản
+    val taiKhoan = getTaiKhoanByTenTK(tentk)
+
+    // Kiểm tra nếu tài khoản không null, loại tài khoản là "chucnang", và mật khẩu khớp
+    return taiKhoan?.let {
+        it.loaitk == LoaiTaiKhoan.chucnang &&
+                BCrypt.verifyer().verify(inputPassword.toCharArray(), it.matkhau).verified
+    } ?: false
+}
+
 
     // Phương thức lấy id_taikhoan theo tên tài khoản (tentk)
     fun getIdByTenTK(tentk: String): Int? {
@@ -70,14 +100,40 @@ class TaiKhoanDAO(private val database: Database) {
             .singleOrNull()
     }
     // tạo tài khoản mới
-    fun createTaiKhoan(tentk: String, matkhau: String, loaitk: LoaiTaiKhoan): TaiKhoan{
-        val newId = database.insertAndGenerateKey(TaiKhoanTable){
-            set(TaiKhoanTable.tenTK, tentk)
-            set(TaiKhoanTable.matKhau, matkhau)
-            set(TaiKhoanTable.loaiTK, loaitk.name)
-        } as Int
-        return TaiKhoan(tentk,matkhau,loaitk,newId)
+//    fun createTaiKhoan(tentk: String, matkhau: String, loaitk: LoaiTaiKhoan): TaiKhoan{
+//
+//
+//        val newId = database.insertAndGenerateKey(TaiKhoanTable){
+//            set(TaiKhoanTable.tenTK, tentk)
+//            set(TaiKhoanTable.matKhau, matkhau)
+//            set(TaiKhoanTable.loaiTK, loaitk.name)
+//        } as Int
+//        return TaiKhoan(tentk,matkhau,loaitk,newId)
+//    }
+    fun createTaiKhoan(tentk: String, matkhau: String, loaitk: LoaiTaiKhoan): TaiKhoan {
+        val hashedPassword = BCrypt.withDefaults().hashToString(12, matkhau.toCharArray())
+
+        val newId = try {
+            database.insertAndGenerateKey(TaiKhoanTable) {
+                set(TaiKhoanTable.tenTK, tentk)
+                set(TaiKhoanTable.matKhau, hashedPassword)
+                set(TaiKhoanTable.loaiTK, loaitk.name)
+            }
+        } catch (e: Exception) {
+            println("Error while inserting account: ${e.message}")
+            throw Exception("Failed to insert and generate key")
+        }
+
+        println("Generated Key: $newId")
+
+        if (newId !is Int) {
+            throw Exception("Generated key is not an Int: $newId")
+        }
+
+        return TaiKhoan(tentk, hashedPassword, loaitk, newId)
     }
+
+
     // Phương thức xóa tài khoản theo tên tài khoản
 
     fun deleteTaiKhoanByTenTK(tentk: String): Int {
@@ -85,10 +141,70 @@ class TaiKhoanDAO(private val database: Database) {
             it.tenTK eq tentk
         }
     }
+//    fun checkPassWordById(idTaiKhoan: Int, passWord: String): Boolean{
+//        val passWordDb = database.from(TaiKhoanTable)
+//            .select(TaiKhoanTable.matKhau)
+//            .where{TaiKhoanTable.idTaiKhoan eq idTaiKhoan}
+//            .map { row -> row[TaiKhoanTable.matKhau] }
+//            .singleOrNull()
+//
+//        return passWordDb == passWord
+//    }
+fun checkPassWordById(idTaiKhoan: Int, passWord: String): Boolean {
+    // Lấy mật khẩu mã hóa từ cơ sở dữ liệu
+    val hashedPasswordDb = database.from(TaiKhoanTable)
+        .select(TaiKhoanTable.matKhau)
+        .where { TaiKhoanTable.idTaiKhoan eq idTaiKhoan }
+        .map { row -> row[TaiKhoanTable.matKhau] }
+        .singleOrNull()
 
+    // Kiểm tra mật khẩu người dùng nhập với mật khẩu mã hóa
+    return hashedPasswordDb?.let {
+        BCrypt.verifyer().verify(passWord.toCharArray(), it).verified
+    } ?: false
 }
 
+//    fun updatePassWord(idTaiKhoan: Int, newPassWord: String):Boolean{
+//        val updateRows = database.update(TaiKhoanTable){
+//            set(TaiKhoanTable.matKhau, newPassWord)
+//            where { TaiKhoanTable.idTaiKhoan eq idTaiKhoan }
+//        }
+//        return updateRows > 0
+//    }
+    //
+fun updatePassWord(idTaiKhoan: Int, newPassWord: String): Boolean {
+    return try {
+        // Mã hóa mật khẩu mới bằng BCrypt
+        val hashedPassword = BCrypt.withDefaults().hashToString(12, newPassWord.toCharArray())
 
+        // Cập nhật mật khẩu đã mã hóa vào cơ sở dữ liệu
+        val updateRows = database.update(TaiKhoanTable) {
+            set(TaiKhoanTable.matKhau, hashedPassword)
+            where { TaiKhoanTable.idTaiKhoan eq idTaiKhoan }
+        }
+
+        updateRows > 0 // Trả về true nếu cập nhật thành công
+    } catch (e: Exception) {
+        println("Error updating password: ${e.message}")
+        false // Trả về false nếu có lỗi
+    }
+}
+
+    fun encryptPassword(idTaiKhoan: Int, plainPassword: String): Boolean {
+        return try {
+            val hashedPassword = BCrypt.withDefaults().hashToString(12, plainPassword.toCharArray())
+            val updateRows = com.example.database.update(TaiKhoanTable) {
+                set(TaiKhoanTable.matKhau, hashedPassword)
+                where { TaiKhoanTable.idTaiKhoan eq idTaiKhoan }
+            }
+            updateRows > 0
+        } catch (e: Exception) {
+            println("Error encrypting password: ${e.message}")
+            false
+        }
+    }
+
+}
 
 
 
@@ -123,6 +239,10 @@ fun Route.addTaiKhoan(){
             call.respond(ResponseMessage(message = "Tạo tài khoản thành công"))
         }
     }
+    //
+
+
+
 }
 
 
@@ -268,6 +388,58 @@ fun Route.checkLoginChucNang(){
         }
     }
 }
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.changePassWord(){
+    route("/post"){
+        post("/changepassword") {
+            val request = call.receive<Map<String,String>>()
+            val idTaiKhoan = request["idTaiKhoan"]?.toIntOrNull()
+            val currentPassWord = request["currentPassWord"]
+            val newPassWord = request["newPassWord"]
+            if(idTaiKhoan == null || currentPassWord.isNullOrEmpty() || newPassWord.isNullOrEmpty()){
+                call.respond(HttpStatusCode.BadRequest,"id tài khoản, mật khẩu hiện tại, mật khẩu mới không được để trống")
+                return@post
+            }
+            val checkPassWord = taiKhoanDAO.checkPassWordById(idTaiKhoan,currentPassWord)
+            if (checkPassWord){
+                val success = taiKhoanDAO.updatePassWord(idTaiKhoan,newPassWord)
+                if(success){
+                    call.respond(HttpStatusCode.OK,"Đổi mật khẩu thành công")
+                }
+                else{
+                    call.respond(HttpStatusCode.BadRequest,"Đổi mật khẩu thất bại")
+                }
+            }
+            else{
+                call.respond(HttpStatusCode.NotFound,"Bạn đã nhập sai mật khẩu hiện tại")
+                return@post
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+fun Route.encryptPasswordRoute() {
+    route("/post") {
+        post("/encrypt-password") {
+            val request = call.receive<Map<String, String>>()
+            val idTaiKhoan = request["idTaiKhoan"]?.toIntOrNull()
+            val plainPassword = request["matKhau"]
+
+            if (idTaiKhoan == null || plainPassword.isNullOrEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, ResponseMessage(error = "ID tài khoản hoặc mật khẩu không hợp lệ"))
+                return@post
+            }
+
+            val success = taiKhoanDAO.encryptPassword(idTaiKhoan, plainPassword)
+            if (success) {
+                call.respond(ResponseMessage(message = "Mật khẩu đã được mã hóa và cập nhật thành công"))
+            } else {
+                call.respond(HttpStatusCode.InternalServerError, ResponseMessage(error = "Lỗi trong quá trình mã hóa mật khẩu"))
+            }
+        }
+    }
+}
+
 
 
 
